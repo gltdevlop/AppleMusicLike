@@ -397,7 +397,7 @@ class SelectionWindow:
             player = MusicPlayer(player_window, audio_file, lrc_file, cover_image, song_title, artist_name)
         except Exception as e:
             messagebox.showerror("Erreur", f"Une erreur est survenue lors du lancement du lecteur : {e}")
-            player_window.destroy()  # Fermer la fenêtre en cas d'erreur
+            player_window.destroy()  #   Fermer la fenêtre en cas d'erreur
 
 
 # Fonction principale
