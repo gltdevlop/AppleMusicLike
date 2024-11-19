@@ -16,9 +16,23 @@ from googleapiclient.discovery import build
 # Configurer le contexte SSL
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Configuration pour l'API de lyricsgenius
-youtube_api_key = 'AIzaSyDrwIxnZnGZ0PoVHufRhwYDFjhKCo4KDm0'
-genius = lyricsgenius.Genius("hjwQZ-DcCS9blhaM7we91YrNvvhpRF07ClFZhLROZkvhOwARpYaoL7XS5EeVygIrZIcmc3s3GEjbaS1yGqv5cg")
+def load_api_keys(file_path="api_keys.txt"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            keys = f.readlines()
+            youtube_key = keys[0].strip()
+            genius_key = keys[1].strip()
+            return youtube_key, genius_key
+    except FileNotFoundError:
+        messagebox.showerror("Erreur", f"Le fichier {file_path} est introuvable.")
+        exit()
+    except IndexError:
+        messagebox.showerror("Erreur", f"Le fichier {file_path} est incomplet. Assurez-vous qu'il contient deux clés.")
+        exit()
+
+
+youtube_api_key, genius_api_key = load_api_keys()
+genius = lyricsgenius.Genius(genius_api_key)
 
 def chercher_lien_youtube(titre_chanson, artiste, api_key):
     # Initialisation du client API YouTube
