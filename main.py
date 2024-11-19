@@ -13,12 +13,24 @@ from PIL.ImagePalette import wedge
 from lrclib import LrcLibAPI
 from googleapiclient.discovery import build
 
-# Configurer le contexte SSL
-ssl._create_default_https_context = ssl._create_unverified_context
 
-# Configuration pour l'API de lyricsgenius
-youtube_api_key = 'AIzaSyDrwIxnZnGZ0PoVHufRhwYDFjhKCo4KDm0'
-genius = lyricsgenius.Genius("hjwQZ-DcCS9blhaM7we91YrNvvhpRF07ClFZhLROZkvhOwARpYaoL7XS5EeVygIrZIcmc3s3GEjbaS1yGqv5cg")
+def load_api_keys(file_path="api_keys.txt"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            keys = f.readlines()
+            youtube_key = keys[0].strip()
+            genius_key = keys[1].strip()
+            return youtube_key, genius_key
+    except FileNotFoundError:
+        messagebox.showerror("Erreur", f"Le fichier {file_path} est introuvable.")
+        exit()
+    except IndexError:
+        messagebox.showerror("Erreur", f"Le fichier {file_path} est incomplet. Assurez-vous qu'il contient deux clés.")
+        exit()
+
+
+youtube_api_key, genius_api_key = load_api_keys()
+genius = lyricsgenius.Genius(genius_api_key)
 
 def chercher_lien_youtube(titre_chanson, artiste, api_key):
     # Initialisation du client API YouTube
@@ -311,7 +323,9 @@ class SelectionWindow:
         self.song_list.bind("<Double-Button-1>", self.launch_music_player)
 
     def load_downloaded_songs(self):
-        self.song_files = {}  # Assurez-vous que ce dictionnaire est vide avant de le remplir
+        self.song_list.delete(0, END)  # Supprimer tous les éléments existants de la liste
+        self.song_files = {}  # Réinitialiser le dictionnaire de correspondance
+
         for filename in os.listdir("songs"):
             if filename.endswith(".mp3"):
                 # Extraire le titre de la chanson et le nom de l'artiste depuis le nom du fichier
@@ -321,8 +335,7 @@ class SelectionWindow:
                     continue  # Ignorer les fichiers qui ne correspondent pas au format attendu
 
                 song_title = song_title_artist[0].replace("-", " ")  # Remplacer les traits d'union par des espaces
-                artist_name = song_title_artist[1].replace(".mp3", "").replace("_",
-                                                                               " ")  # Remplacer l'underscore par un espace
+                artist_name = song_title_artist[1].replace(".mp3", "").replace("_", " ")  # Remplacer les underscores
 
                 display_name = f"{song_title} - {artist_name}"
 
@@ -340,9 +353,17 @@ class SelectionWindow:
         if song_title and artist_name:
             link = chercher_lien_youtube(song_title, artist_name, youtube_api_key)
             audio_file = download_audio_and_lrc(link, song_title, artist_name)
-            display_name = f"{song_title} - {artist_name}".replace("_", " ")
 
-            # Ajouter la chanson à la liste et au dictionnaire de correspondance
+            if not os.path.exists(audio_file):  # Vérifier si le fichier audio existe
+                messagebox.showerror("Erreur", "Le fichier audio n'a pas été téléchargé avec succès.")
+                return
+
+            lrc_file = f"lrc/{song_title.replace(' ', '-')}_{artist_name.replace(' ', '-')}.lrc"
+            if not os.path.exists(lrc_file):  # Vérifier si le fichier LRC existe
+                messagebox.showwarning("Avertissement", "Les paroles synchronisées n'ont pas été trouvées.")
+
+            # Ajouter à la liste des chansons après validation
+            display_name = f"{song_title} - {artist_name}"
             self.song_list.insert(END, display_name)
             self.song_files[display_name] = os.path.basename(audio_file)
 
@@ -350,6 +371,8 @@ class SelectionWindow:
             self.song_title_entry.delete(0, END)
             self.artist_name_entry.delete(0, END)
             print("Téléchargement effectué")
+
+            self.load_downloaded_songs()
 
     def launch_music_player(self, event):
         selected_display_name = self.song_list.get(self.song_list.curselection())
