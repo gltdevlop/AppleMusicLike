@@ -307,8 +307,6 @@ class SelectionWindow:
         self.download_frame = Frame(self.frame, bg="black")
         self.download_frame.pack(fill=X, side=BOTTOM)
 
-
-
         Label(self.download_frame, text="Titre:", bg="black", fg="white").grid(row=1, column=0, padx=5, pady=5)
         self.song_title_entry = Entry(self.download_frame)
         self.song_title_entry.grid(row=1, column=1, padx=5, pady=5)
