@@ -17,6 +17,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 genius = lyricsgenius.Genius("hjwQZ-DcCS9blhaM7we91YrNvvhpRF07ClFZhLROZkvhOwARpYaoL7XS5EeVygIrZIcmc3s3GEjbaS1yGqv5cg")
 
 
+
 # Fonction pour télécharger l'audio depuis YouTube
 def download_audio(youtube_url, song_title, artist_name):
     formatted_title = song_title.replace(" ", "-")
@@ -54,6 +55,7 @@ def fetch_lrc_from_lrclib(track_name, artist_name):
             lrc_file.write(f"[00:00.00] ..." + ("\n"))
             lrc_file.write(f"[00:00.01] {track_name} - {artist_name}" + ("\n"))
             lrc_file.write("\n".join(found_lyrics.split("\n")))
+            lrc_file.write(f"AppleMusiclike - gltdevlop / l'herbag")
         return lrc_filename
     return None
 

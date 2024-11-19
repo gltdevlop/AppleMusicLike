@@ -1,3 +1,5 @@
+from tkinter import messagebox
+
 import lyricsgenius
 import pygame
 from tkinter import *
@@ -8,17 +10,42 @@ import ssl
 import requests
 from io import BytesIO
 import os
+
+from PIL.ImagePalette import wedge
 from lrclib import LrcLibAPI
+from googleapiclient.discovery import build
 
 # Configurer le contexte SSL
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # Configuration pour l'API de lyricsgenius
+youtube_api_key = 'AIzaSyDrwIxnZnGZ0PoVHufRhwYDFjhKCo4KDm0'
 genius = lyricsgenius.Genius("hjwQZ-DcCS9blhaM7we91YrNvvhpRF07ClFZhLROZkvhOwARpYaoL7XS5EeVygIrZIcmc3s3GEjbaS1yGqv5cg")
 
+def chercher_lien_youtube(titre_chanson, artiste, api_key):
+    # Initialisation du client API YouTube
+    youtube = build('youtube', 'v3', developerKey=api_key)
+
+    # Requête de recherche sur YouTube
+    requete = youtube.search().list(
+        part='snippet',
+        q=f'{titre_chanson} {artiste} topic',
+        type='video',
+        maxResults=1,
+        videoCategoryId='10',  # Catégorie Musique
+    )
+
+    resultats = requete.execute()
+
+    if resultats['items']:
+        video_id = resultats['items'][0]['id']['videoId']
+        lien_youtube = f'https://www.youtube.com/watch?v={video_id}'
+        return lien_youtube
+    else:
+        return "Aucune vidéo trouvée."
 
 # Fonction pour télécharger l'audio depuis YouTube
-def download_audio(youtube_url, song_title, artist_name):
+def download_audio_and_lrc(link, song_title, artist_name):
     formatted_title = song_title.replace(" ", "-")
     formatted_artist = artist_name.replace(" ", "-")
     filename = f"songs/{formatted_title}_{formatted_artist}"
@@ -33,29 +60,47 @@ def download_audio(youtube_url, song_title, artist_name):
         }],
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([youtube_url])
+        ydl.download([link])
     print("Téléchargement terminé")
+
+    formatted_title = song_title.replace(" ", "-")
+    formatted_artist = artist_name.replace(" ", "-")
+    lrc_filename = f"lrc/{formatted_title}_{formatted_artist}.lrc"
+    api = LrcLibAPI(user_agent="my-app/0.0.1")
+    try:
+        lyrics = api.get_lyrics(
+            track_name=formatted_title,
+            artist_name=formatted_artist,
+        )
+        found_lyrics = lyrics.synced_lyrics or lyrics.plain_lyrics
+
+        if not found_lyrics:
+            print("Aucune parole trouvée pour cette chanson.")
+
+    except Exception as e:
+        if hasattr(e, 'status_code') and e.status_code == 404:
+            messagebox.showerror("Erreur", "Impossible de trouver des paroles. Merci de vérifier"
+                                           " le nom de l'artiste et de la chanson.")
+            os.remove(f"{filename}.mp3")
+        else:
+            print(f"Une erreur s'est produite : {e}")
+
+    if found_lyrics:
+        with open(lrc_filename, "w", encoding="utf-8") as lrc_file:
+            lrc_file.write(f"[00:00.00] ...\n")
+            lrc_file.write(f"[00:00.01] {song_title} - {artist_name}\n")
+            lrc_file.write("\n".join(found_lyrics.split("\n")))
+            lrc_file.write("AppleMusiclike - gltdevlop / l'herbag")
+        print(f"Fichier LRC enregistré : {lrc_filename}")
+        return lrc_filename
+
+    else:
+        print("Paroles non trouvées et aucun fichier n'a été créé.")
+
     return f"{filename}.mp3"
 
 
 # Fonction pour récupérer et formater les paroles synchronisées au format LRC depuis l'API lrclib
-def fetch_lrc_from_lrclib(track_name, artist_name):
-    formatted_title = track_name.replace(" ", "-")
-    formatted_artist = artist_name.replace(" ", "_")
-    lrc_filename = f"lrc/{track_name}_{artist_name}.lrc".replace(" ", "_")
-    api = LrcLibAPI(user_agent="my-app/0.0.1")
-    lyrics = api.get_lyrics(
-        track_name=formatted_title,
-        artist_name=formatted_artist,
-    )
-    found_lyrics = lyrics.synced_lyrics or lyrics.plain_lyrics
-    if found_lyrics:
-        with open(lrc_filename, "w", encoding="utf-8") as lrc_file:
-            lrc_file.write(f"[00:00.00] ..." + ("\n"))
-            lrc_file.write(f"[00:00.01] {track_name} - {artist_name}" + ("\n"))
-            lrc_file.write("\n".join(found_lyrics.split("\n")))
-        return lrc_filename
-    return None
 
 
 def get_cover(song_title, artist_name):
@@ -84,6 +129,8 @@ class MusicPlayer:
         self.audio_file = audio_file
         self.is_playing = True
         self.current_line_index = 0
+
+        root.resizable(False, False)
 
         # Passer à plein écran
         self.root.attributes('-fullscreen', True)
@@ -177,9 +224,8 @@ class MusicPlayer:
                         self.next_lyric_label.config(text=self.lyrics[self.current_line_index + 1][0])
                     else:
                         self.next_lyric_label.config(text="")
-
                     print(
-                        f"Displaying lyric: {current_lyric} at {timestamp}, current time: {current_time}")  # Debug statement
+                        f"Displaying lyric: {current_lyric} at {timestamp}, current time: {current_time}")
                     self.current_line_index += 1
 
             self.root.after(100, display_next_line)
@@ -194,20 +240,24 @@ class MusicPlayer:
 
     def load_lyrics_from_lrc(self, lrc_file):
         lyrics = []
-        with open(lrc_file, "r", encoding="utf-8") as file:
-            for line in file:
-                line = line.strip()
-                if line.startswith("[") and "] " in line:
-                    try:
-                        time_tag, text = line.split("] ", 1)
-                        minutes, seconds = map(float, time_tag[1:].split(":"))
-                        timestamp = minutes * 60 + seconds
-                        lyrics.append((text, timestamp))
-                        print(f"Loaded lyric: {text} at {timestamp}")  # Debug statement
-                    except ValueError:
-                        print(f"Line skipped due to parsing error: {line}")
-                else:
-                    print(f"Line skipped (not valid): {line}")
+        try:
+            with open(lrc_file, "r", encoding="utf-8") as file:
+                for line in file:
+                    line = line.strip()
+                    if line.startswith("[") and "] " in line:
+                        try:
+                            time_tag, text = line.split("] ", 1)
+                            minutes, seconds = map(float, time_tag[1:].split(":"))
+                            timestamp = minutes * 60 + seconds
+                            lyrics.append((text, timestamp))
+                            print(f"Loaded lyric: {text} at {timestamp}")  # Debug statement
+                        except ValueError:
+                            print(f"Line skipped due to parsing error: {line}")
+                    else:
+                        print(f"Line skipped (not valid): {line}")
+        except FileNotFoundError:
+            messagebox.showerror("Erreur", "Le Fichier LRC n'eiste pas. Merci de réessayer.")
+            exit()
         return lyrics
 
     def resize_elements(self, event=None):
@@ -239,9 +289,7 @@ class SelectionWindow:
         self.download_frame = Frame(self.frame, bg="black")
         self.download_frame.pack(fill=X, side=BOTTOM)
 
-        Label(self.download_frame, text="Lien YouTube:", bg="black", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        self.youtube_url_entry = Entry(self.download_frame)
-        self.youtube_url_entry.grid(row=0, column=1, padx=5, pady=5)
+
 
         Label(self.download_frame, text="Titre:", bg="black", fg="white").grid(row=1, column=0, padx=5, pady=5)
         self.song_title_entry = Entry(self.download_frame)
@@ -280,12 +328,12 @@ class SelectionWindow:
             print("Aucune chanson trouvée dans le répertoire 'songs'.")  # Débogage
 
     def download_song(self):
-        youtube_url = self.youtube_url_entry.get()
         song_title = self.song_title_entry.get()
         artist_name = self.artist_name_entry.get()
 
-        if youtube_url and song_title and artist_name:
-            audio_file = download_audio(youtube_url, song_title, artist_name)
+        if song_title and artist_name:
+            link = chercher_lien_youtube(song_title, artist_name, youtube_api_key)
+            audio_file = download_audio_and_lrc(link, song_title, artist_name)
             display_name = f"{song_title} - {artist_name}".replace("_", " ")
 
             # Ajouter la chanson à la liste et au dictionnaire de correspondance
@@ -293,7 +341,6 @@ class SelectionWindow:
             self.song_files[display_name] = os.path.basename(audio_file)
 
             # Effacer les champs de saisie après téléchargement
-            self.youtube_url_entry.delete(0, END)
             self.song_title_entry.delete(0, END)
             self.artist_name_entry.delete(0, END)
             print("Téléchargement effectué")
@@ -306,7 +353,7 @@ class SelectionWindow:
         song_title, artist_name = filename.rsplit("_", 1)[0], filename.rsplit("_", 1)[1].replace(".mp3", "")
 
         audio_file = f"songs/{filename}"
-        lrc_file = fetch_lrc_from_lrclib(song_title, artist_name)
+        lrc_file = f"lrc/{song_title}_{artist_name}.lrc"
         cover_url, song_title, artist_name = get_cover(song_title, artist_name)
 
         if cover_url:
@@ -320,7 +367,7 @@ class SelectionWindow:
 def main():
     root = Tk()
     app = SelectionWindow(root)
-    root.geometry("600x150")
+    root.geometry("600x250")
     root.mainloop()
 
 
