@@ -113,8 +113,13 @@ def download_audio_and_lrc(link, song_title, artist_name):
 # Fonction pour récupérer et formater les paroles synchronisées au format LRC depuis l'API lrclib
 
 
-def get_cover(song_title, artist_name):
-    song = genius.search_song(song_title, artist_name)
+def get_cover(song_title, artist_name, album_name=None):
+    # Si un album est fourni, inclure dans la recherche
+    query = f"{song_title} {artist_name}"
+    if album_name:
+        query += f" {album_name}"
+
+    song = genius.search_song(query)
     if song:
         cover_url = song.song_art_image_url
         return cover_url, song.title, song.artist
@@ -129,8 +134,6 @@ def download_cover_image(cover_url):
     return cover_image
 
 
-# Classe principale pour l'application
-# Classe principale pour l'application
 # Classe principale pour l'application
 class MusicPlayer:
     def __init__(self, root, audio_file, lrc_file, cover_image, song_title, artist_name):
@@ -174,7 +177,7 @@ class MusicPlayer:
 
         self.lyrics_label = Label(
             self.canvas, text="", font=("SF Pro", 25, "bold"), fg="white",
-            justify=CENTER, wraplength=self.root.winfo_width() * 0.6, bg="black"
+            justify=CENTER, wraplength=600, bg="black"
         )
         self.lyrics_label.place(relx=0.68, rely=0.5, anchor=CENTER)
 
@@ -315,7 +318,12 @@ class SelectionWindow:
         self.artist_name_entry = Entry(self.download_frame)
         self.artist_name_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=3, column=0, columnspan=2,
+        # Ajout du champ pour l'album
+        Label(self.download_frame, text="Album (optionnel):", bg="black", fg="white").grid(row=3, column=0, padx=5, pady=5)
+        self.album_name_entry = Entry(self.download_frame)
+        self.album_name_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=4, column=0, columnspan=2,
                                                                                          pady=10)
 
         self.song_list.bind("<Double-Button-1>", self.launch_music_player)
@@ -347,6 +355,7 @@ class SelectionWindow:
     def download_song(self):
         song_title = self.song_title_entry.get()
         artist_name = self.artist_name_entry.get()
+        album_name = self.album_name_entry.get()  # Récupérer le nom de l'album
 
         if song_title and artist_name:
             link = chercher_lien_youtube(song_title, artist_name, youtube_api_key)
@@ -368,6 +377,7 @@ class SelectionWindow:
             # Effacer les champs de saisie après téléchargement
             self.song_title_entry.delete(0, END)
             self.artist_name_entry.delete(0, END)
+            self.album_name_entry.delete(0, END)  # Réinitialiser le champ de l'album
             print("Téléchargement effectué")
 
             self.load_downloaded_songs()
@@ -381,7 +391,10 @@ class SelectionWindow:
 
         audio_file = f"songs/{filename}"
         lrc_file = f"lrc/{song_title}_{artist_name}.lrc"
-        cover_url, song_title, artist_name = get_cover(song_title, artist_name)
+
+        # Récupérer le nom de l'album s'il existe
+        album_name = self.album_name_entry.get() if self.album_name_entry else None
+        cover_url, song_title, artist_name = get_cover(song_title, artist_name, album_name)
 
         if cover_url:
             cover_image = download_cover_image(cover_url)
