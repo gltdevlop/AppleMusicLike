@@ -113,8 +113,13 @@ def download_audio_and_lrc(link, song_title, artist_name):
 # Fonction pour récupérer et formater les paroles synchronisées au format LRC depuis l'API lrclib
 
 
-def get_cover(song_title, artist_name):
-    song = genius.search_song(song_title, artist_name)
+def get_cover(song_title, artist_name, album_name=None):
+    # Si un album est fourni, inclure dans la recherche
+    query = f"{song_title} {artist_name}"
+    if album_name:
+        query += f" {album_name}"
+
+    song = genius.search_song(query)
     if song:
         cover_url = song.song_art_image_url
         return cover_url, song.title, song.artist
@@ -129,8 +134,6 @@ def download_cover_image(cover_url):
     return cover_image
 
 
-# Classe principale pour l'application
-# Classe principale pour l'application
 # Classe principale pour l'application
 class MusicPlayer:
     def __init__(self, root, audio_file, lrc_file, cover_image, song_title, artist_name):
@@ -174,7 +177,7 @@ class MusicPlayer:
 
         self.lyrics_label = Label(
             self.canvas, text="", font=("SF Pro", 25, "bold"), fg="white",
-            justify=CENTER, wraplength=self.root.winfo_width() * 0.6, bg="black"
+            justify=CENTER, wraplength=600, bg="black"
         )
         self.lyrics_label.place(relx=0.68, rely=0.5, anchor=CENTER)
 
@@ -182,13 +185,13 @@ class MusicPlayer:
             self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
             justify=LEFT
         )
-        self.previous_lyric_label.place(relx=0.68, rely=0.45, anchor=CENTER)
+        self.previous_lyric_label.place(relx=0.68, rely=0.42, anchor=CENTER)
 
         self.next_lyric_label = Label(
             self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
             justify=LEFT
         )
-        self.next_lyric_label.place(relx=0.68, rely=0.55, anchor=CENTER)
+        self.next_lyric_label.place(relx=0.68, rely=0.58, anchor=CENTER)
 
         play_icon_img = Image.open("icons/play_icon.png").resize((30, 30))
         pause_icon_img = Image.open("icons/pause_icon.png").resize((30, 30))
@@ -279,11 +282,13 @@ class MusicPlayer:
         return lyrics
 
     def resize_elements(self, event=None):
+        self.lyrics_label.config(wraplength=self.root.winfo_width() * 0.6)
         self.cover_label.place(relx=0.285, rely=0.475, anchor=CENTER)
         self.song_info_label.place(relx=0.285, rely=0.676, anchor=CENTER)
         self.lyrics_label.place(relx=0.68, rely=0.5, anchor=CENTER)
         self.previous_lyric_label.place(relx=0.68, rely=0.45, anchor=CENTER)
         self.next_lyric_label.place(relx=0.68, rely=0.55, anchor=CENTER)
+
 
 # Classe pour la fenêtre de sélection
 class SelectionWindow:
@@ -307,8 +312,6 @@ class SelectionWindow:
         self.download_frame = Frame(self.frame, bg="black")
         self.download_frame.pack(fill=X, side=BOTTOM)
 
-
-
         Label(self.download_frame, text="Titre:", bg="black", fg="white").grid(row=1, column=0, padx=5, pady=5)
         self.song_title_entry = Entry(self.download_frame)
         self.song_title_entry.grid(row=1, column=1, padx=5, pady=5)
@@ -317,7 +320,12 @@ class SelectionWindow:
         self.artist_name_entry = Entry(self.download_frame)
         self.artist_name_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=3, column=0, columnspan=2,
+        # Ajout du champ pour l'album
+        Label(self.download_frame, text="Album (optionnel):", bg="black", fg="white").grid(row=3, column=0, padx=5, pady=5)
+        self.album_name_entry = Entry(self.download_frame)
+        self.album_name_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=4, column=0, columnspan=2,
                                                                                          pady=10)
 
         self.song_list.bind("<Double-Button-1>", self.launch_music_player)
@@ -325,6 +333,9 @@ class SelectionWindow:
     def load_downloaded_songs(self):
         self.song_list.delete(0, END)  # Supprimer tous les éléments existants de la liste
         self.song_files = {}  # Réinitialiser le dictionnaire de correspondance
+
+        if not os.path.exists("songs"):
+            os.mkdir("songs")
 
         for filename in os.listdir("songs"):
             if filename.endswith(".mp3"):
@@ -347,8 +358,12 @@ class SelectionWindow:
             print("Aucune chanson trouvée dans le répertoire 'songs'.")  # Débogage
 
     def download_song(self):
+        if not os.path.exists("lrc"):
+            os.mkdir("lrc")
+
         song_title = self.song_title_entry.get()
         artist_name = self.artist_name_entry.get()
+        album_name = self.album_name_entry.get()  # Récupérer le nom de l'album
 
         if song_title and artist_name:
             link = chercher_lien_youtube(song_title, artist_name, youtube_api_key)
@@ -370,6 +385,7 @@ class SelectionWindow:
             # Effacer les champs de saisie après téléchargement
             self.song_title_entry.delete(0, END)
             self.artist_name_entry.delete(0, END)
+            self.album_name_entry.delete(0, END)  # Réinitialiser le champ de l'album
             print("Téléchargement effectué")
 
             self.load_downloaded_songs()
@@ -383,7 +399,10 @@ class SelectionWindow:
 
         audio_file = f"songs/{filename}"
         lrc_file = f"lrc/{song_title}_{artist_name}.lrc"
-        cover_url, song_title, artist_name = get_cover(song_title, artist_name)
+
+        # Récupérer le nom de l'album s'il existe
+        album_name = self.album_name_entry.get() if self.album_name_entry else None
+        cover_url, song_title, artist_name = get_cover(song_title, artist_name, album_name)
 
         if cover_url:
             cover_image = download_cover_image(cover_url)
@@ -397,7 +416,7 @@ class SelectionWindow:
             player = MusicPlayer(player_window, audio_file, lrc_file, cover_image, song_title, artist_name)
         except Exception as e:
             messagebox.showerror("Erreur", f"Une erreur est survenue lors du lancement du lecteur : {e}")
-            player_window.destroy()  # Fermer la fenêtre en cas d'erreur
+            player_window.destroy()  #   Fermer la fenêtre en cas d'erreur
 
 
 # Fonction principale
