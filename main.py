@@ -334,6 +334,9 @@ class SelectionWindow:
         self.song_list.delete(0, END)  # Supprimer tous les éléments existants de la liste
         self.song_files = {}  # Réinitialiser le dictionnaire de correspondance
 
+        if not os.path.exists("songs"):
+            os.mkdir("songs")
+
         for filename in os.listdir("songs"):
             if filename.endswith(".mp3"):
                 # Extraire le titre de la chanson et le nom de l'artiste depuis le nom du fichier
@@ -355,6 +358,9 @@ class SelectionWindow:
             print("Aucune chanson trouvée dans le répertoire 'songs'.")  # Débogage
 
     def download_song(self):
+        if not os.path.exists("lrc"):
+            os.mkdir("lrc")
+
         song_title = self.song_title_entry.get()
         artist_name = self.artist_name_entry.get()
         album_name = self.album_name_entry.get()  # Récupérer le nom de l'album
