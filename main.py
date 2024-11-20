@@ -185,13 +185,13 @@ class MusicPlayer:
             self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
             justify=LEFT
         )
-        self.previous_lyric_label.place(relx=0.68, rely=0.45, anchor=CENTER)
+        self.previous_lyric_label.place(relx=0.68, rely=0.42, anchor=CENTER)
 
         self.next_lyric_label = Label(
             self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
             justify=LEFT
         )
-        self.next_lyric_label.place(relx=0.68, rely=0.55, anchor=CENTER)
+        self.next_lyric_label.place(relx=0.68, rely=0.58, anchor=CENTER)
 
         play_icon_img = Image.open("icons/play_icon.png").resize((30, 30))
         pause_icon_img = Image.open("icons/pause_icon.png").resize((30, 30))
@@ -282,11 +282,13 @@ class MusicPlayer:
         return lyrics
 
     def resize_elements(self, event=None):
+        self.lyrics_label.config(wraplength=self.root.winfo_width() * 0.6)
         self.cover_label.place(relx=0.285, rely=0.475, anchor=CENTER)
         self.song_info_label.place(relx=0.285, rely=0.676, anchor=CENTER)
         self.lyrics_label.place(relx=0.68, rely=0.5, anchor=CENTER)
         self.previous_lyric_label.place(relx=0.68, rely=0.45, anchor=CENTER)
         self.next_lyric_label.place(relx=0.68, rely=0.55, anchor=CENTER)
+
 
 # Classe pour la fenêtre de sélection
 class SelectionWindow:
