@@ -54,7 +54,7 @@ def chercher_lien_youtube(titre_chanson, artiste, api_key):
     else:
         return "Aucune vidéo trouvée."
 
-# Fonction pour télécharger l'audio depuis YouTube
+# Fonction pour télécharger l'audio depuis YouTube et les paroles
 def download_audio_and_lrc(link, song_title, artist_name):
     formatted_title = song_title.replace(" ", "-")
     formatted_artist = artist_name.replace(" ", "-")
@@ -110,12 +110,8 @@ def download_audio_and_lrc(link, song_title, artist_name):
     return f"{filename}.mp3"
 
 
-# Fonction pour récupérer et formater les paroles synchronisées au format LRC depuis l'API lrclib
-
-
 def get_cover(song_title, artist_name):
     query = f"{song_title} {artist_name}"
-
 
     song = genius.search_song(query)
     if song:
@@ -191,17 +187,19 @@ class MusicPlayer:
         )
         self.next_lyric_label.place(relx=0.68, rely=0.58, anchor=CENTER)
 
-        play_icon_img = Image.open("icons/play_icon.png").resize((30, 30))
-        pause_icon_img = Image.open("icons/pause_icon.png").resize((30, 30))
-        self.play_icon = ImageTk.PhotoImage(play_icon_img)
-        self.pause_icon = ImageTk.PhotoImage(pause_icon_img)
+        exit_icon_img = Image.open("icons/exit_icon.png").convert("RGBA")
+        background = Image.new("RGBA", exit_icon_img.size, (0, 0, 0, 255))  # Fond noir
+        combined = Image.alpha_composite(background, exit_icon_img).convert("RGB")
+        exit_icon_img_resized = combined.resize((30, 30))
+        self.exit_icon = ImageTk.PhotoImage(exit_icon_img_resized)
 
-        # Créer le bouton avec l'icône de pause par défaut
-        self.play_pause_button = Button(
-            self.canvas, image=self.pause_icon, command=self.toggle_play_pause,
+
+        # Créer le bouton avec l'icône d'exit par défaut
+        self.exit_btn = Button(
+            self.canvas, image=self.exit_icon, command=self.toggle_exit,
             bg="black", activebackground="black", borderwidth=0
         )
-        self.play_pause_button.place(relx=0.285, rely=0.74, anchor=CENTER)
+        self.exit_btn.place(relx=0.285, rely=0.74, anchor=CENTER)
 
         pygame.mixer.init()
         pygame.mixer.music.load(self.audio_file)
@@ -212,15 +210,8 @@ class MusicPlayer:
         pygame.mixer.music.play()
         self.show_lyrics()  # Appel ici pour démarrer l'affichage des paroles
 
-    def toggle_play_pause(self):
-        if self.is_playing:
-            pygame.mixer.music.pause()
-            self.play_pause_button.config(text="Play")
-            self.is_playing = False
-        else:
-            pygame.mixer.music.unpause()
-            self.play_pause_button.config(text="Pause")
-            self.is_playing = True
+    def toggle_exit(self):
+        exit(0)
 
     def show_lyrics(self):
         def display_next_line():
@@ -308,21 +299,29 @@ class SelectionWindow:
 
         # Frame de téléchargement
         self.download_frame = Frame(self.frame, bg="black")
-        self.download_frame.pack(fill=X, side=BOTTOM)
+        self.download_frame.pack(fill=BOTH, expand=True, side=LEFT)
 
-        Label(self.download_frame, text="Titre:", bg="black", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        # Utilisation d'un layout grid
+        self.download_frame.grid_rowconfigure(0, weight=1)
+        self.download_frame.grid_rowconfigure(1, weight=1)
+        self.download_frame.grid_rowconfigure(2, weight=1)
+        self.download_frame.grid_rowconfigure(3, weight=1)
+        self.download_frame.grid_columnconfigure(0, weight=1)
+        self.download_frame.grid_columnconfigure(1, weight=1)
+
+        # Widgets centrés
+        Label(self.download_frame, text="Titre :", bg="black", fg="white").grid(row=1, column=0, padx=5, pady=5,
+                                                                               sticky="e")
         self.song_title_entry = Entry(self.download_frame)
-        self.song_title_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.song_title_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        Label(self.download_frame, text="Artiste:", bg="black", fg="white").grid(row=2, column=0, padx=5, pady=5)
+        Label(self.download_frame, text="Artiste :", bg="black", fg="white").grid(row=2, column=0, padx=5, pady=5,
+                                                                                 sticky="e")
         self.artist_name_entry = Entry(self.download_frame)
-        self.artist_name_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.artist_name_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
 
-
-
-        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=4, column=0, columnspan=2,
-                                                                                         pady=10)
-
+        Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=3, column=0, columnspan=2,
+                                                                                         pady=10, sticky="")
         self.song_list.bind("<Double-Button-1>", self.launch_music_player)
 
     def load_downloaded_songs(self):
