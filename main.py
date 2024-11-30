@@ -113,11 +113,9 @@ def download_audio_and_lrc(link, song_title, artist_name):
 # Fonction pour récupérer et formater les paroles synchronisées au format LRC depuis l'API lrclib
 
 
-def get_cover(song_title, artist_name, album_name=None):
-    # Si un album est fourni, inclure dans la recherche
+def get_cover(song_title, artist_name):
     query = f"{song_title} {artist_name}"
-    if album_name:
-        query += f" {album_name}"
+
 
     song = genius.search_song(query)
     if song:
@@ -320,10 +318,7 @@ class SelectionWindow:
         self.artist_name_entry = Entry(self.download_frame)
         self.artist_name_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        # Ajout du champ pour l'album
-        Label(self.download_frame, text="Album (optionnel):", bg="black", fg="white").grid(row=3, column=0, padx=5, pady=5)
-        self.album_name_entry = Entry(self.download_frame)
-        self.album_name_entry.grid(row=3, column=1, padx=5, pady=5)
+
 
         Button(self.download_frame, text="Télécharger", command=self.download_song).grid(row=4, column=0, columnspan=2,
                                                                                          pady=10)
@@ -363,7 +358,6 @@ class SelectionWindow:
 
         song_title = self.song_title_entry.get()
         artist_name = self.artist_name_entry.get()
-        album_name = self.album_name_entry.get()  # Récupérer le nom de l'album
 
         if song_title and artist_name:
             link = chercher_lien_youtube(song_title, artist_name, youtube_api_key)
@@ -385,7 +379,6 @@ class SelectionWindow:
             # Effacer les champs de saisie après téléchargement
             self.song_title_entry.delete(0, END)
             self.artist_name_entry.delete(0, END)
-            self.album_name_entry.delete(0, END)  # Réinitialiser le champ de l'album
             print("Téléchargement effectué")
 
             self.load_downloaded_songs()
@@ -400,9 +393,7 @@ class SelectionWindow:
         audio_file = f"songs/{filename}"
         lrc_file = f"lrc/{song_title}_{artist_name}.lrc"
 
-        # Récupérer le nom de l'album s'il existe
-        album_name = self.album_name_entry.get() if self.album_name_entry else None
-        cover_url, song_title, artist_name = get_cover(song_title, artist_name, album_name)
+        cover_url, song_title, artist_name = get_cover(song_title, artist_name)
 
         if cover_url:
             cover_image = download_cover_image(cover_url)
