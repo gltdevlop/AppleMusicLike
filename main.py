@@ -160,45 +160,42 @@ class MusicPlayer:
         self.root.bind("<Configure>", self.resize_elements)
         cover_resized = self.cover_image.resize((350, 350))
         self.cover_image_tk = ImageTk.PhotoImage(cover_resized)
-        self.cover_label = Label(self.canvas, image=self.cover_image_tk, bg="black")
+        self.cover_label = Label(self.canvas, image=self.cover_image_tk, bg=root["bg"])
         self.cover_label.place(relx=0.285, rely=0.475, anchor=CENTER)
 
         self.song_info_label = Label(
             self.canvas, text=f"{song_title} - {artist_name}", font=("SF Pro", 20, "bold"),
-            fg="white", bg="black", relief=FLAT
+            fg="white", bg=root["bg"], relief=FLAT
         )
         self.song_info_label.place(relx=0.285, rely=0.676, anchor=CENTER)
 
         self.lyrics_label = Label(
             self.canvas, text="", font=("SF Pro", 25, "bold"), fg="white",
-            justify=CENTER, wraplength=600, bg="black"
+            justify=CENTER, wraplength=600, bg=root["bg"]
         )
         self.lyrics_label.place(relx=0.68, rely=0.5, anchor=CENTER)
 
         self.previous_lyric_label = Label(
-            self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
+            self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg=root["bg"],
             justify=LEFT
         )
         self.previous_lyric_label.place(relx=0.68, rely=0.42, anchor=CENTER)
 
         self.next_lyric_label = Label(
-            self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg="black",
+            self.canvas, text="", font=("SF Pro", 22), fg="lightgray", bg=root["bg"],
             justify=LEFT
         )
         self.next_lyric_label.place(relx=0.68, rely=0.58, anchor=CENTER)
 
         exit_icon_img = Image.open("icons/exit_icon.png").convert("RGBA")
-        background = Image.new("RGBA", exit_icon_img.size, (0, 0, 0, 255))  # Fond noir
-        combined = Image.alpha_composite(background, exit_icon_img).convert("RGB")
-        exit_icon_img_resized = combined.resize((30, 30))
+        exit_icon_img_resized = exit_icon_img.resize((30, 30))
         self.exit_icon = ImageTk.PhotoImage(exit_icon_img_resized)
 
-
-        # Créer le bouton avec l'icône d'exit par défaut
         self.exit_btn = Button(
             self.canvas, image=self.exit_icon, command=self.toggle_exit,
-            bg="black", activebackground="black", borderwidth=0
+            borderwidth=0
         )
+
         self.exit_btn.place(relx=0.285, rely=0.74, anchor=CENTER)
 
         pygame.mixer.init()
