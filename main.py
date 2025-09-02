@@ -12,21 +12,7 @@ import os
 from PIL.ImagePalette import wedge
 from lrclib import LrcLibAPI
 from googleapiclient.discovery import build
-
-
-def load_api_keys(file_path="api_keys.txt"):
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            keys = f.readlines()
-            youtube_key = keys[0].strip()
-            genius_key = keys[1].strip()
-            return youtube_key, genius_key
-    except FileNotFoundError:
-        messagebox.showerror("Erreur", f"Le fichier {file_path} est introuvable.")
-        exit()
-    except IndexError:
-        messagebox.showerror("Erreur", f"Le fichier {file_path} est incomplet. Assurez-vous qu'il contient deux clés.")
-        exit()
+from functions.loader import load_api_keys
 
 
 youtube_api_key, genius_api_key = load_api_keys()
@@ -60,7 +46,9 @@ def download_audio_and_lrc(link, song_title, artist_name):
     formatted_artist = artist_name.replace(" ", "-")
     filename = f"songs/{formatted_title}_{formatted_artist}"
 
+    current_folder = os.path.dirname(__file__)
     ydl_opts = {
+        'ffmpeg_location': current_folder,
         'format': 'bestaudio/best',
         'outtmpl': filename,
         'postprocessors': [{
@@ -81,6 +69,8 @@ def download_audio_and_lrc(link, song_title, artist_name):
         lyrics = api.get_lyrics(
             track_name=formatted_title,
             artist_name=formatted_artist,
+            album_name=None,
+            duration=None,
         )
         found_lyrics = lyrics.synced_lyrics or lyrics.plain_lyrics
 
